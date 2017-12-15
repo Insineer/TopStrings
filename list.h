@@ -19,47 +19,12 @@ struct __list {
 };
 
 typedef struct __list list;
+typedef struct __list_elem list_elem;
 
-void list_initialize(list *l, size_t typeSize) {
-    l->size = 0;
-    l->unitSize = typeSize;
-    l->head = NULL;
-    l->tail = NULL;
-}
-
-void list_pushBack(list *l, void *data) {
-    l->size++;
-
-    struct __list_elem *newElem = malloc(sizeof(struct __list_elem) + l->unitSize);
-    newElem->list = l;
-    memcpy(newElem + sizeof(struct __list_elem), data, l->unitSize);
-    newElem->data = newElem + sizeof(struct __list_elem);
-    newElem->next = NULL;
-
-    if (l->tail) {
-        l->tail->next = newElem;
-        l->tail = newElem;
-    } else {
-        l->head = newElem;
-        l->tail = newElem;
-    }
-}
-
-void list_removeFront(list *l) {
-    if (l->head) {
-        l->size--;
-        struct __list_elem *elemToRemove = l->head;
-        if (l->head->next) {
-            l->head = l->head->next;
-        } else {
-            l->tail = l->head = NULL;
-        }
-        free(elemToRemove);
-    }
-}
-
-void *list_getFront(list *l) {
-    if (!l->head)
-        return NULL;
-    return l->head->data;
-}
+void list_initialize(list *l, size_t typeSize);
+void list_pushBack(list *l, void *data);
+void list_pushFront(list *l, void *data);
+void list_insertAfter(list_elem *l, void *data);
+void list_removeFront(list *l);
+void *list_getFront(list *l);
+size_t list_getSize(list *l);

@@ -58,6 +58,13 @@ void *vector_get(vector *v, size_t index) {
     return NULL;
 }
 
+void *vector_getBack(vector *v) {
+    if (v->length) {
+        return v->data + (v->length - 1) * v->unitSize;
+    }
+    return NULL;
+}
+
 void *vector_getData(vector *v) {
     if (v->capacity) {
         return v->data;

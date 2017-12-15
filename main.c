@@ -6,6 +6,7 @@
 
 #include "test.h"
 #include "top_strings.h"
+#include "list.h"
 
 
 int main(int argc, char *argv[]) {
@@ -62,6 +63,14 @@ int main(int argc, char *argv[]) {
         FindTopStrings("input.txt", NULL, 10);
     }
 
+//    list lst;
+//    list_initialize(&lst, sizeof(int));
+//    int a = 5;
+//    list_pushBack(&lst, &a);
+//    a = 4;
+//    list_pushBack(&lst, &a);
+//    a = 3;
+//    list_pushBack(&lst, &a);
 
 //    size_t size = 1024 * 1024 * 1024;
 //    void *lots_of_memory = calloc(size, 1);
