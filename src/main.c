@@ -3,25 +3,27 @@
 #include <getopt.h>
 #include <stdbool.h>
 
-
 #include "test.h"
 #include "top_strings.h"
-#include "list.h"
 
 
 int main(int argc, char *argv[]) {
-    size_t fileUnit_size = 100; // in MB     // -s
-    size_t num_of_threads = 1;               // -j
-    bool generateTest = false;               // -t
+    int topSize = 10;                     // -n
+    int fileUnit_size = 100; // in MB     // -s
+    int num_of_threads = 1;               // -j
+    bool generateTest = false;            // -t
+    char *outputFile = "output.txt";      // -o
 
-    char *file;
+    char *file = "input.txt";
 
-    const char *optString = "s:j:to:h?";
+    const char *optString = "n:s:j:to:h?";
 
     static const struct option longOpts[] = {
+        { "top-size", required_argument, NULL, 'n' },
         { "fileunit-size", required_argument, NULL, 's' },
         { "threads", required_argument, NULL, 'j' },
         { "generate-test", no_argument, NULL, 't'},
+        { "output-file", required_argument, NULL, 'o'},
         { "help", no_argument, NULL, 'h' },
         { NULL, no_argument, NULL, 0 }
     };
@@ -31,14 +33,15 @@ int main(int argc, char *argv[]) {
     while (opt != -1) {
         switch (opt) {
             case 'j': {
-                num_of_threads = optarg;
+                num_of_threads = atoi(optarg);
                 break;
             }
             case 's': {
-                fileUnit_size = optarg;
+                fileUnit_size = atoi(optarg);
                 break;
             }
             case 'o': {
+                outputFile = optarg;
                 break;
             }
             case 't': {
@@ -55,34 +58,14 @@ int main(int argc, char *argv[]) {
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
 
-    file = argv[optind];
+    if (argv[optind])
+        file = argv[optind];
 
     if (generateTest) {
         GenerateTest(file);
     } else {
-        FindTopStrings("input.txt", NULL, 10);
+        FindTopStrings(file, outputFile, topSize);
     }
-
-//    list lst;
-//    list_initialize(&lst, sizeof(int));
-//    int a = 5;
-//    list_pushBack(&lst, &a);
-//    a = 4;
-//    list_pushBack(&lst, &a);
-//    a = 3;
-//    list_pushBack(&lst, &a);
-
-//    size_t size = 1024 * 1024 * 1024;
-//    void *lots_of_memory = calloc(size, 1);
-//    if (!lots_of_memory) {
-//        printf("Failed\n");
-//    } else {
-//        printf("Success\n");
-//    }
-//
-//    getc(stdin);
-//
-//    free(lots_of_memory);
 
     return 0;
 }

@@ -7,8 +7,10 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "vector.h"
-#include "list.h"
+#include "useful/vector.h"
+#include "useful/list.h"
+
+const int MAX_STRING_LEN = 500;
 
 struct work {
     char *buffer;
@@ -56,7 +58,7 @@ void *threadFunc(void *workPool_v) {
 
         if (myWork) {
             list_removeFront(&workPool->lst);
-            printf("Sort buffer %d\n", myWork->bufferNum);
+            //printf("Sort buffer %d\n", myWork->bufferNum);
             pthread_mutex_unlock(&workPool->mutex);
             sortStrings((char **) vector_getData(myWork->vect),
                         vector_length(myWork->vect),
@@ -64,7 +66,7 @@ void *threadFunc(void *workPool_v) {
             // free buffer and vector
             vector_destruct(myWork->vect);
             pthread_mutex_lock(&workPool->mutex);
-            printf("Free buffer %d\n", myWork->bufferNum);
+            //printf("Free buffer %d\n", myWork->bufferNum);
             workPool->bufferStatuses[myWork->bufferNum] = false;
             pthread_mutex_unlock(&workPool->mutex);
         } else {
@@ -77,7 +79,7 @@ void *threadFunc(void *workPool_v) {
     }
 }
 
-void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile);
+void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int topSize);
 
 void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) {
     int numOfThreads = 4;
@@ -118,7 +120,7 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
     int tFileNum = 0;
     int bufferNum = 0;
 
-    char newString[256];
+    char newString[MAX_STRING_LEN];
     size_t newStringLen = 0;
 
     while (!feof(inputFileFD) || newStringLen) { // if newStringLen != 0 then we need to write it in the next file
@@ -128,7 +130,7 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
 
         while (buffer_p < bufferEnd) {
             if (!newStringLen) {
-                if (!fgets(newString, 256, inputFileFD))
+                if (!fgets(newString, MAX_STRING_LEN, inputFileFD))
                     break;
                 newStringLen = strlen(newString);
             }
@@ -146,7 +148,7 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
         // buffer bufferNum ready
         // push work
 
-        char *p = malloc(256 * sizeof(char));
+        char *p = malloc(MAX_STRING_LEN * sizeof(char));
         vector_pushBack(&fileNames, &p);
         char *tOutputFileName = * (char **) vector_getBack(&fileNames);
         sprintf(tOutputFileName, "sortResult%d.txt", tFileNum);
@@ -158,7 +160,7 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
         newWork.bufferNum = bufferNum;
 
         pthread_mutex_lock(&works.mutex);
-        printf("Added work with buffer %d\n", bufferNum);
+        //printf("Added work with buffer %d\n", bufferNum);
         list_pushBack(&works.lst, &newWork);
         works.bufferStatuses[bufferNum] = true;
         pthread_mutex_unlock(&works.mutex);
@@ -188,12 +190,10 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
     for (size_t i = 0; i < numOfThreads; i++)
         pthread_join(threads[i], NULL);
 
-    findTopStringsInSortedFiles(&fileNames, outputFile);
+    findTopStringsInSortedFiles(&fileNames, outputFile, topSize);
 }
 
-void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
-    int numOfTop = 10;
-
+void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int topSize) {
     struct topMember {
         char *str;
         int num;
@@ -204,10 +204,10 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
     for (size_t i = 0; i < filesVect->length; i++) {
         files[i] = fopen(* (char **) vector_get(filesVect, i), "r");
         if (!files[i]) {
-            printf("findTopStringsInSortedFiles Error: unable to find %d file\n", i);
+            printf("findTopStringsInSortedFiles Error: unable to open %d file\n", i);
             return;
         }
-        str[i] = malloc(256 * sizeof(char));
+        str[i] = malloc(MAX_STRING_LEN * sizeof(char));
     }
 
     list top;
@@ -216,7 +216,7 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
     bool allFilesEnd = false;
 
     for (int i = 0; i < filesVect->length; i++) {
-        fgets(str[i], 256, files[i]);
+        fgets(str[i], MAX_STRING_LEN, files[i]);
     }
 
     do {
@@ -225,21 +225,21 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
         char *firstStr = str[0];
         for (int i = 1; i < filesVect->length; i++) {
             if (!str[i]) continue;
-            int res = strncmp(firstStr, str[i], 256);
+            int res = strncmp(firstStr, str[i], MAX_STRING_LEN);
             if (res > 0) {
                 firstStr = str[i];
             }
         }
 
-        char firstStrBuf[256];
+        char firstStrBuf[MAX_STRING_LEN];
         int count = 0;
-        strncpy(firstStrBuf, firstStr, 256);
+        strncpy(firstStrBuf, firstStr, MAX_STRING_LEN);
 
         // Count total amount
         for (int i = 0; i < filesVect->length; i++) {
-            while (str[i] && !strncmp(firstStrBuf, str[i], 256)) {
+            while (str[i] && !strncmp(firstStrBuf, str[i], MAX_STRING_LEN)) {
                 count++;
-                str[i] = fgets(str[i], 256, files[i]);
+                str[i] = fgets(str[i], MAX_STRING_LEN, files[i]);
             }
             if (str[i]) allFilesEnd = false;
         }
@@ -249,15 +249,15 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
         list_elem *p = top.head;
         list_elem *place = NULL;
         if (!p) {
-            char *s = malloc(sizeof(*s) * 256);
+            char *s = malloc(sizeof(*s) * MAX_STRING_LEN);
             struct topMember *st = malloc(sizeof(*st));
-            strncpy(s, firstStrBuf, 256);
+            strncpy(s, firstStrBuf, MAX_STRING_LEN);
             st->str = s;
             st->num = count;
             list_pushBack(&top, &st);
         } else {
             do {
-                if (((struct topMember *)p->data)->num < count) {
+                if ((*(struct topMember **)p->data)->num < count) {
                     place = p;
                     p = p->next;
                 } else {
@@ -265,17 +265,17 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
                 }
             } while (p);
             if (place) {
-                char *s = malloc(sizeof(*s) * 256);
+                char *s = malloc(sizeof(*s) * MAX_STRING_LEN);
                 struct topMember *st = malloc(sizeof(*st));
-                strncpy(s, firstStrBuf, 256);
+                strncpy(s, firstStrBuf, MAX_STRING_LEN);
                 st->str = s;
                 st->num = count;
                 list_insertAfter(place, &st);
             } else {
-                if (list_getSize(&top) < 10) {
-                    char *s = malloc(sizeof(*s) * 256);
+                if (list_getSize(&top) < topSize) {
+                    char *s = malloc(sizeof(*s) * MAX_STRING_LEN);
                     struct topMember *st = malloc(sizeof(*st));
-                    strncpy(s, firstStrBuf, 256);
+                    strncpy(s, firstStrBuf, MAX_STRING_LEN);
                     st->str = s;
                     st->num = count;
                     list_pushFront(&top, &st);
@@ -283,15 +283,19 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile) {
             }
         }
 
-        if (list_getSize(&top) > 10) {
+        if (list_getSize(&top) > topSize) {
             list_removeFront(&top);
         }
     } while (!allFilesEnd);
 
+    FILE *outputFD = fopen(outputFile, "w");
+
     list_elem *p = top.head;
     for (int i = 0; i < list_getSize(&top); i++) {
         struct topMember *tm = * (struct topMember **) p->data;
-        printf("%d: %s", tm->num, tm->str);
+        fprintf(outputFD, "%d: %s", tm->num, tm->str);
         p = p->next;
     }
+
+    fclose(outputFD);
 }

@@ -48,6 +48,7 @@ void list_pushFront(list *l, void *data) {
     newElem->list = l;
     newElem->data = newElem + 1; // data is part of buffer after __list_elem
     memcpy(newElem->data, data, l->unitSize);
+    newElem->next = NULL;
 
     if (l->head) {
         newElem->next = l->head;
@@ -71,16 +72,10 @@ void list_insertAfter(list_elem *le, void *data) {
     newElem->list = l;
     newElem->data = newElem + 1; // data is part of buffer after __list_elem
     memcpy(newElem->data, data, l->unitSize);
-    newElem->next = NULL;
 
     newElem->next = le->next;
-    if (le == l->head) {
-        l->head = newElem;
-    } else {
-        list_elem *p = l->head;
-        while (p->next != le) p = p->next;
-        p->next = newElem;
-    }
+    le->next = newElem;
+
     if (l->tail == le) {
         l->tail = newElem;
     }
@@ -102,13 +97,11 @@ void list_removeFront(list *l) {
 }
 
 void *list_getFront(list *l) {
-    if (!l) return;
     if (!l->head)
         return NULL;
     return l->head->data;
 }
 
 size_t list_getSize(list *l) {
-    if (!l) return;
     return l->size;
 }

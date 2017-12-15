@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "vector.h"
+#include "useful/vector.h"
 
 void GenerateTest(const char *outputFile) {
     printf("Generate Test\n");
