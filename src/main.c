@@ -8,23 +8,22 @@
 
 
 int main(int argc, char *argv[]) {
-    int topSize = 10;                     // -n
-    int maxRAM = 200; // in MB            // -s
-    int num_of_threads = 1;               // -j
+    int topSize = 10;                        // -n
+    int maxRAM = 200; // in bytes            // -m
+    int num_of_threads = 1;                  // -j
     int testSize = 0;
-    char *outputFile = "output.txt";      // -o
+    char *outputFile = "output.txt";         // -o
 
     char *file = "input.txt";
 
-    const char *optString = "n:s:j:o:h?";
+    const char *optString = "n:m:j:o:";
 
     static const struct option longOpts[] = {
         { "top-size", required_argument, NULL, 'n' },
-        { "fileunit-size", required_argument, NULL, 's' },
+        { "max-ram", required_argument, NULL, 'm' },
         { "threads", required_argument, NULL, 'j' },
         { "generate-test", required_argument, NULL, 't'},
         { "output-file", required_argument, NULL, 'o'},
-        { "help", no_argument, NULL, 'h' },
         { NULL, no_argument, NULL, 0 }
     };
     int longIndex;
@@ -36,7 +35,7 @@ int main(int argc, char *argv[]) {
                 num_of_threads = atoi(optarg);
                 break;
             }
-            case 's': {
+            case 'm': {
                 maxRAM = atoi(optarg);
                 break;
             }
@@ -46,10 +45,6 @@ int main(int argc, char *argv[]) {
             }
             case 't': {
                 testSize = atoi(optarg);
-                break;
-            }
-            case 'h':
-            case '?': {
                 break;
             }
             default:
@@ -64,7 +59,7 @@ int main(int argc, char *argv[]) {
     if (testSize) {
         GenerateTest(file, maxRAM);
     } else {
-        FindTopStrings(file, outputFile, topSize);
+        FindTopStrings(file, outputFile, topSize, maxRAM, num_of_threads);
     }
 
     return 0;

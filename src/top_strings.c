@@ -86,10 +86,9 @@ void *threadFunc(void *workPool_v) {
 
 void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int topSize);
 
-void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) {
-    int numOfThreads = 4;
+void FindTopStrings(const char *inputFile, const char *outputFile, int topSize, size_t maxRAM, int numOfThreads) {
     int numOfBuffers = numOfThreads + 1;
-    size_t bufferSize = 100; //1024 * 1024 * 100; // 100 MB
+    size_t bufferSize = maxRAM / numOfBuffers;
 
     FILE *inputFileFD = fopen(inputFile, "r");
     if (!inputFileFD) {
