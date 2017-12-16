@@ -28,3 +28,4 @@ void list_insertAfter(list_elem *l, void *data);
 void list_removeFront(list *l);
 void *list_getFront(list *l);
 size_t list_getSize(list *l);
+void list_destruct(list *l);

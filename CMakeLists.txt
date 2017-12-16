@@ -3,6 +3,8 @@ project(TopStrings)
 
 set(CMAKE_C_STANDARD 11)
 
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g")
+
 set(SOURCE_FILES
         src/main.c
         src/test.h
@@ -12,7 +14,9 @@ set(SOURCE_FILES
         src/useful/list.h
         src/useful/list.c
         src/useful/vector.h
-        src/useful/vector.c )
+        src/useful/vector.c)
+
+add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 add_executable(TopStrings ${SOURCE_FILES})
 

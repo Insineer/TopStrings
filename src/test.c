@@ -7,7 +7,7 @@
 
 #include "useful/vector.h"
 
-void GenerateTest(const char *outputFile) {
+void GenerateTest(const char *outputFile, size_t memoryBufferSize) {
     printf("Generate Test\n");
 
     //
@@ -26,8 +26,8 @@ void GenerateTest(const char *outputFile) {
     while (fgets(str, 100, template_fd)) {
         size_t length = strlen(str);
         if (length > 1) { // exclude empty strings "\n"
-            char *password = malloc(length * sizeof(*password));
-            memcpy(password, str, length);
+            char *password = malloc((length + 1) * sizeof(*password));
+            memcpy(password, str, length + 1);
             vector_pushBack(&template, &password);
         }
     }
@@ -36,16 +36,14 @@ void GenerateTest(const char *outputFile) {
     // Create buffer
     //
 
-    size_t bufferSize = 1024 * 1024 * 500; // 500 MB
-
-    char *buffer = malloc(bufferSize);
+    char *buffer = malloc(memoryBufferSize);
 
     if (!buffer) {
         printf("GenerateTest Error: unable to create a buffer");
         return;
     }
 
-    char *bufferEnd = buffer + bufferSize;
+    char *bufferEnd = buffer + memoryBufferSize;
 
     //
     // Fill buffer
@@ -54,14 +52,17 @@ void GenerateTest(const char *outputFile) {
     srand((unsigned) time(NULL));
     const double RAND_MULTIPLIER = (double) vector_length(&template) / RAND_MAX;
 
-    for (char *p = buffer; p < bufferEnd; ) {
+    char *buffer_p = buffer;
+    while (buffer_p < bufferEnd) {
         char *newString = * (char **) vector_get(&template, (size_t) (rand() * RAND_MULTIPLIER));
         size_t newStringLen = strlen(newString);
 
-        if (bufferEnd - p - 1 > newStringLen) {
-            strncpy(p, newString, newStringLen);
+        if (bufferEnd - buffer_p - 1 > newStringLen) {
+            strncpy(buffer_p, newString, newStringLen);
+            buffer_p += newStringLen;
+        } else {
+            break;
         }
-        p += newStringLen;
     }
 
     // Set zero at the end of buffer
@@ -70,12 +71,14 @@ void GenerateTest(const char *outputFile) {
     // Write buffer to file
 
     FILE *fd = fopen(outputFile, "wb");
-    fwrite(buffer, bufferSize, sizeof(char), fd);
+    fwrite(buffer, buffer_p - buffer, sizeof(char), fd);
     fclose(fd);
 
     //
     // Free resources
     //
+
+    fclose(template_fd);
 
     // Free buffer
     free(buffer);

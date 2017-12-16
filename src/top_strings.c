@@ -54,20 +54,25 @@ void *threadFunc(void *workPool_v) {
     while (!stop) {
         pthread_mutex_lock(&workPool->mutex);
         stop = workPool->stop;
-        struct work *myWork = (struct work *) list_getFront(&workPool->lst);
 
-        if (myWork) {
+        struct work *myWork_p = (struct work *) list_getFront(&workPool->lst);
+
+        if (myWork_p) {
+            struct work myWork;
+            memcpy(&myWork, myWork_p, sizeof(myWork));
             list_removeFront(&workPool->lst);
-            //printf("Sort buffer %d\n", myWork->bufferNum);
+
             pthread_mutex_unlock(&workPool->mutex);
-            sortStrings((char **) vector_getData(myWork->vect),
-                        vector_length(myWork->vect),
-                        myWork->outputFile);
+
+            sortStrings((char **) vector_getData(myWork.vect),
+                        vector_length(myWork.vect),
+                        myWork.outputFile);
+
             // free buffer and vector
-            vector_destruct(myWork->vect);
+            vector_destruct(myWork.vect);
+
             pthread_mutex_lock(&workPool->mutex);
-            //printf("Free buffer %d\n", myWork->bufferNum);
-            workPool->bufferStatuses[myWork->bufferNum] = false;
+            workPool->bufferStatuses[myWork.bufferNum] = false;
             pthread_mutex_unlock(&workPool->mutex);
         } else {
             pthread_mutex_unlock(&workPool->mutex);
@@ -111,6 +116,7 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
     pthread_mutex_init(&works.mutex, NULL);
     list_initialize(&works.lst, sizeof(struct work));
     works.bufferStatuses = bufferStatuses;
+    works.stop = false;
     for (int i = 0; i < numOfThreads; i++)
         pthread_create(threads + i, NULL, threadFunc, &works);
 
@@ -187,10 +193,17 @@ void FindTopStrings(const char *inputFile, const char *outputFile, int topSize) 
     works.stop = true;
     pthread_mutex_unlock(&works.mutex);
 
+    fclose(inputFileFD);
+
     for (size_t i = 0; i < numOfThreads; i++)
         pthread_join(threads[i], NULL);
 
+    free(buffer);
+
     findTopStringsInSortedFiles(&fileNames, outputFile, topSize);
+    for (size_t i = 0; i < vector_length(&fileNames); i++)
+        free(* (char **) vector_get(&fileNames, i));
+    vector_destruct(&fileNames);
 }
 
 void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int topSize) {
@@ -200,7 +213,7 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int 
     };
 
     FILE *files[filesVect->length];
-    char *str[filesVect->length];
+    char *str[filesVect->length];     // one file - one buffer for cur string
     for (size_t i = 0; i < filesVect->length; i++) {
         files[i] = fopen(* (char **) vector_get(filesVect, i), "r");
         if (!files[i]) {
@@ -222,9 +235,10 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int 
     do {
         allFilesEnd = true;
         // Find first string
-        char *firstStr = str[0];
+        char *firstStr = NULL;
         for (int i = 1; i < filesVect->length; i++) {
             if (!str[i]) continue;
+            if (!firstStr) firstStr = str[i];
             int res = strncmp(firstStr, str[i], MAX_STRING_LEN);
             if (res > 0) {
                 firstStr = str[i];
@@ -239,7 +253,10 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int 
         for (int i = 0; i < filesVect->length; i++) {
             while (str[i] && !strncmp(firstStrBuf, str[i], MAX_STRING_LEN)) {
                 count++;
-                str[i] = fgets(str[i], MAX_STRING_LEN, files[i]);
+                if (!fgets(str[i], MAX_STRING_LEN, files[i])) {
+                    free(str[i]);
+                    str[i] = NULL;
+                }
             }
             if (str[i]) allFilesEnd = false;
         }
@@ -284,9 +301,17 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int 
         }
 
         if (list_getSize(&top) > topSize) {
+            struct topMember *tm = * (struct topMember **) list_getFront(&top);
+            free(tm->str);
+            free(tm);
             list_removeFront(&top);
         }
     } while (!allFilesEnd);
+
+    for (size_t i = 0; i < filesVect->length; i++) {
+        fclose(files[i]);
+        free(str[i]);
+    }
 
     FILE *outputFD = fopen(outputFile, "w");
 
@@ -294,8 +319,12 @@ void findTopStringsInSortedFiles(vector *filesVect, const char *outputFile, int 
     for (int i = 0; i < list_getSize(&top); i++) {
         struct topMember *tm = * (struct topMember **) p->data;
         fprintf(outputFD, "%d: %s", tm->num, tm->str);
+        free(tm->str);
+        free(tm);
         p = p->next;
     }
+
+    list_destruct(&top);
 
     fclose(outputFD);
 }

@@ -105,3 +105,13 @@ void *list_getFront(list *l) {
 size_t list_getSize(list *l) {
     return l->size;
 }
+
+void list_destruct(list *l) {
+    list_elem *p = l->head;
+    while (p) {
+        list_elem *t = p;
+        p = p->next;
+        free(t);
+    }
+    list_initialize(l, l->unitSize);
+}
